@@ -3,14 +3,23 @@ import Event from "../models/Event.js";
 
 const router = express.Router();
 
-// GET /events - fetch all upcoming events (future dates only)
-// Supports optional query params: ?type=Cleanup&search=beach
+// GET /events - fetch all upcoming events (future dates only), or events by creator
 router.get("/", async (req, res) => {
   try {
-    const { type, search } = req.query;
+    const { type, search, email } = req.query;
 
+    // If "email" is provided, this is a "Manage Events" request —
+    // return ALL events created by this user, past or future.
+    if (email) {
+      const myEvents = await Event.find({ creatorEmail: email }).sort({
+        eventDate: 1,
+      });
+      return res.status(200).json(myEvents);
+    }
+
+    // Otherwise, this is the public "Upcoming Events" request
     const query = {
-      eventDate: { $gte: new Date() }, // only future events
+      eventDate: { $gte: new Date() },
     };
 
     if (type && type !== "all") {
@@ -18,10 +27,10 @@ router.get("/", async (req, res) => {
     }
 
     if (search) {
-      query.title = { $regex: search, $options: "i" }; // case-insensitive partial match
+      query.title = { $regex: search, $options: "i" };
     }
 
-    const events = await Event.find(query).sort({ eventDate: 1 }); // soonest first
+    const events = await Event.find(query).sort({ eventDate: 1 });
     res.status(200).json(events);
   } catch (error) {
     console.error(error);
@@ -61,6 +70,57 @@ router.post("/", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to create event" });
+  }
+});
+
+// PUT /events/:id - update an event (only by its creator)
+router.put("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { requesterEmail, ...updateData } = req.body;
+
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    // Ownership check: users can only update their OWN created events
+    if (event.creatorEmail !== requesterEmail) {
+      return res.status(403).json({ message: "You can only update your own events" });
+    }
+
+    const updated = await Event.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    res.status(200).json(updated);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to update event" });
+  }
+});
+
+// DELETE /events/:id?email=... - delete an event (only by its creator)
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.query;
+
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (event.creatorEmail !== email) {
+      return res.status(403).json({ message: "You can only delete your own events" });
+    }
+
+    await Event.findByIdAndDelete(id);
+    res.status(200).json({ message: "Event deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to delete event" });
   }
 });
 

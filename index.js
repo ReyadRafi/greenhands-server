@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./src/config/db.js";
 import eventRoutes from "./src/routes/eventRoutes.js";
+import joinedEventRoutes from "./src/routes/joinedEventRoutes.js";
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/events", eventRoutes);
+app.use("/joined-events", joinedEventRoutes);
 
 app.listen(port, () => {
   console.log(`🚀 Server listening on port ${port}`);
