@@ -30,3 +30,5 @@ app.use("/joined-events", joinedEventRoutes);
 app.listen(port, () => {
   console.log(`🚀 Server listening on port ${port}`);
 });
+
+export default app;
