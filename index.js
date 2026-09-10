@@ -14,7 +14,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "https://your-client-url.web.app", // update this after deploying the client in Step 19
+      "https://greenhands-80740.web.app",
     ],
     credentials: true,
   })
